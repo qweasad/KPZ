@@ -28,107 +28,58 @@ public:
     }
 };
 
-class LightElementNode;
-
-class NodeState {
-public:
-    virtual ~NodeState() = default;
-    virtual string modifyHTML(const LightElementNode* node, const string& html) const = 0;
-    virtual string name() const = 0;
-};
-
-class VisibleState : public NodeState {
-public:
-    string modifyHTML(const LightElementNode* node, const string& html) const override {
-        return html; 
-    }
-
-    string name() const override {
-        return "visible";
-    }
-};
-
-class HiddenState : public NodeState {
-public:
-    string modifyHTML(const LightElementNode* node, const string& html) const override {
-        return ""; 
-    }
-
-    string name() const override {
-        return "hidden";
-    }
-};
-
-class ActiveState : public NodeState {
-public:
-    string modifyHTML(const LightElementNode* node, const string& html) const override {
-        return html; 
-    }
-
-    string name() const override {
-        return "active";
-    }
-};
-
 class LightElementNode : public LightNode {
+protected:
     string tagName;
     DisplayType displayType;
     ClosingType closingType;
     vector<string> cssClasses;
     vector<LightNode*> children;
-    NodeState* state;
 
 public:
     LightElementNode(const string& tag,
         DisplayType display,
         ClosingType closing,
-        const vector<string>& classes = {},
-        NodeState* initialState = new VisibleState())
-        : tagName(tag), displayType(display), closingType(closing), cssClasses(classes), state(initialState) {
+        const vector<string>& classes = {})
+        : tagName(tag), displayType(display), closingType(closing), cssClasses(classes) {
     }
 
-    ~LightElementNode() {
+    virtual ~LightElementNode() {
         for (auto c : children) delete c;
-        delete state;
     }
 
     void addChild(LightNode* child) {
         children.push_back(child);
     }
 
-    void setState(NodeState* newState) {
-        delete state;
-        state = newState;
-    }
-
     string classAttr() const {
-        vector<string> allClasses = cssClasses;
-
-        if (state->name() == "active") {
-            allClasses.push_back("active");
-        }
-
-        if (allClasses.empty()) return "";
+        if (cssClasses.empty()) return "";
         string res = " class=\"";
-        for (size_t i = 0; i < allClasses.size(); ++i) {
-            res += allClasses[i];
-            if (i + 1 < allClasses.size()) res += " ";
+        for (size_t i = 0; i < cssClasses.size(); ++i) {
+            res += cssClasses[i];
+            if (i + 1 < cssClasses.size()) res += " ";
         }
         res += "\"";
         return res;
     }
 
     string outerHTML() const override {
-        string rawHtml;
+        onCreated();
+        onClassListApplied();
+        onStylesApplied();
 
+        string result;
         if (closingType == ClosingType::Single) {
-            rawHtml = "<" + tagName + classAttr() + "/>";
+            result = "<" + tagName + classAttr() + "/>";
         }
         else {
-            rawHtml = "<" + tagName + classAttr() + ">" + innerHTML() + "</" + tagName + ">";
+            string inner = innerHTML();
+            onTextRendered(inner);  
+            result = "<" + tagName + classAttr() + ">" + inner + "</" + tagName + ">";
         }
 
-        return state->modifyHTML(this, rawHtml);
+        onInserted();
+        return result;
     }
 
     string innerHTML() const override {
@@ -138,23 +89,52 @@ public:
         }
         return res;
     }
+
+    virtual void onCreated() const {
+        cout << "[Lifecycle] onCreated()\n";
+    }
+
+    virtual void onClassListApplied() const {
+        cout << "[Lifecycle] onClassListApplied()\n";
+    }
+
+    virtual void onStylesApplied() const {
+        cout << "[Lifecycle] onStylesApplied()\n";
+    }
+
+    virtual void onTextRendered(string& text) const {
+        cout << "[Lifecycle] onTextRendered()\n";
+    }
+
+    virtual void onInserted() const {
+        cout << "[Lifecycle] onInserted()\n";
+    }
 };
 
+class LoggingDiv : public LightElementNode {
+public:
+    LoggingDiv(const vector<string>& classes = {})
+        : LightElementNode("div", DisplayType::Block, ClosingType::Double, classes) {
+    }
+
+    void onCreated() const override {
+        cout << "[LoggingDiv] Created!\n";
+    }
+
+    void onInserted() const override {
+        cout << "[LoggingDiv] Inserted into DOM!\n";
+    }
+
+    void onTextRendered(string& text) const override {
+        cout << "[LoggingDiv] Rendering text: " << text << "\n";
+    }
+};
 
 int main() {
-    auto* div = new LightElementNode("div", DisplayType::Block, ClosingType::Double, { "container" });
+    auto* div = new LoggingDiv({ "box", "blue" });
+    div->addChild(new LightTextNode("Hello from inside the div!"));
 
-    div->addChild(new LightTextNode("Привіт, це активний блок!"));
-
-    cout << "== Початковий стан (Visible) ==\n";
-    cout << div->outerHTML() << "\n\n";
-
-    div->setState(new ActiveState());
-    cout << "== Стан Active (має клас 'active') ==\n";
-    cout << div->outerHTML() << "\n\n";
-
-    div->setState(new HiddenState());
-    cout << "== Стан Hidden (нічого не видно) ==\n";
+    cout << "\n--- Rendering HTML ---\n";
     cout << div->outerHTML() << "\n";
 
     delete div;
