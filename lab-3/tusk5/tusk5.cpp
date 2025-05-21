@@ -53,6 +53,17 @@ public:
         children.push_back(child);
     }
 
+    void removeLastChild() {
+        if (!children.empty()) {
+            delete children.back();
+            children.pop_back();
+        }
+    }
+
+    const vector<LightNode*>& getChildren() const {
+        return children;
+    }
+
     size_t childrenCount() const {
         return children.size();
     }
@@ -86,27 +97,92 @@ public:
     }
 };
 
+class Command {
+public:
+    virtual ~Command() = default;
+    virtual void execute() = 0;
+    virtual void undo() = 0;
+};
+
+class AddChildCommand : public Command {
+    LightElementNode* parent;
+    LightNode* child;
+    bool executed = false;
+
+public:
+    AddChildCommand(LightElementNode* p, LightNode* c)
+        : parent(p), child(c) {
+    }
+
+    void execute() override {
+        if (!executed) {
+            parent->addChild(child);
+            executed = true;
+        }
+    }
+
+    void undo() override {
+        if (executed) {
+            parent->removeLastChild();
+            executed = false;
+        }
+    }
+};
+
+class CommandManager {
+    vector<Command*> history;
+
+public:
+    void executeCommand(Command* cmd) {
+        cmd->execute();
+        history.push_back(cmd);
+    }
+
+    void undoLast() {
+        if (!history.empty()) {
+            Command* cmd = history.back();
+            cmd->undo();
+            delete cmd;
+            history.pop_back();
+        }
+    }
+
+    ~CommandManager() {
+        for (auto cmd : history) delete cmd;
+    }
+};
+
 int main() {
-    LightElementNode* ul = new LightElementNode("ul", DisplayType::Block, ClosingType::Double, { "list" });
+    CommandManager manager;
 
-    LightElementNode* li1 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li1->addChild(new LightTextNode("Пункт 1"));
+    auto* ul = new LightElementNode("ul", DisplayType::Block, ClosingType::Double, { "list" });
 
-    LightElementNode* li2 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li2->addChild(new LightTextNode("Пункт 2"));
+    auto* li1 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
+    auto* text1 = new LightTextNode("Пункт 1");
+    li1->addChild(text1);
 
-    LightElementNode* li3 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li3->addChild(new LightTextNode("Пункт 3"));
+    auto* cmd1 = new AddChildCommand(ul, li1);
+    manager.executeCommand(cmd1);
 
-    ul->addChild(li1);
-    ul->addChild(li2);
-    ul->addChild(li3);
+    cout << "\n== Після додавання першого елемента ==\n";
+    cout << ul->outerHTML() << "\n";
 
-    cout << "outerHTML:\n" << ul->outerHTML() << "\n\n";
-    cout << "innerHTML:\n" << ul->innerHTML() << "\n";
+    auto* li2 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
+    auto* text2 = new LightTextNode("Пункт 2");
+    li2->addChild(text2);
 
-    delete ul;  
+    auto* cmd2 = new AddChildCommand(ul, li2);
+    manager.executeCommand(cmd2);
+
+    cout << "\n== Після додавання другого елемента ==\n";
+    cout << ul->outerHTML() << "\n";
+
+    manager.undoLast();
+
+    cout << "\n== Після undo (другий елемент видалено) ==\n";
+    cout << ul->outerHTML() << "\n";
+
+    delete ul;
 
     return 0;
 }
-
