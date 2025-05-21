@@ -1,0 +1,44 @@
+# Visual Studio кеші та сміття
+.vs/
+*.vcxproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Кеш IntelliSense
+*.ipch
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.cachefile
+
+# Бінарники
+*.exe
+*.dll
+*.lib
+*.obj
+*.pch
+*.pdb
+*.idb
+
+# Логи та тимчасові
+*.log
+*.tlog
+*.lastbuildstate
+
+# Системні
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Інше
+*.VC.db
+*.ilk
