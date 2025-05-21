@@ -28,53 +28,107 @@ public:
     }
 };
 
+class LightElementNode;
+
+class NodeState {
+public:
+    virtual ~NodeState() = default;
+    virtual string modifyHTML(const LightElementNode* node, const string& html) const = 0;
+    virtual string name() const = 0;
+};
+
+class VisibleState : public NodeState {
+public:
+    string modifyHTML(const LightElementNode* node, const string& html) const override {
+        return html; 
+    }
+
+    string name() const override {
+        return "visible";
+    }
+};
+
+class HiddenState : public NodeState {
+public:
+    string modifyHTML(const LightElementNode* node, const string& html) const override {
+        return ""; 
+    }
+
+    string name() const override {
+        return "hidden";
+    }
+};
+
+class ActiveState : public NodeState {
+public:
+    string modifyHTML(const LightElementNode* node, const string& html) const override {
+        return html; 
+    }
+
+    string name() const override {
+        return "active";
+    }
+};
+
 class LightElementNode : public LightNode {
     string tagName;
     DisplayType displayType;
     ClosingType closingType;
     vector<string> cssClasses;
     vector<LightNode*> children;
+    NodeState* state;
 
 public:
     LightElementNode(const string& tag,
         DisplayType display,
         ClosingType closing,
-        const vector<string>& classes = {})
-        : tagName(tag), displayType(display), closingType(closing), cssClasses(classes) {
+        const vector<string>& classes = {},
+        NodeState* initialState = new VisibleState())
+        : tagName(tag), displayType(display), closingType(closing), cssClasses(classes), state(initialState) {
     }
 
     ~LightElementNode() {
-        for (auto c : children) {
-            delete c;
-        }
+        for (auto c : children) delete c;
+        delete state;
     }
 
     void addChild(LightNode* child) {
         children.push_back(child);
     }
 
-    size_t childrenCount() const {
-        return children.size();
+    void setState(NodeState* newState) {
+        delete state;
+        state = newState;
     }
 
     string classAttr() const {
-        if (cssClasses.empty()) return "";
+        vector<string> allClasses = cssClasses;
+
+        if (state->name() == "active") {
+            allClasses.push_back("active");
+        }
+
+        if (allClasses.empty()) return "";
         string res = " class=\"";
-        for (size_t i = 0; i < cssClasses.size(); ++i) {
-            res += cssClasses[i];
-            if (i + 1 < cssClasses.size()) res += " ";
+        for (size_t i = 0; i < allClasses.size(); ++i) {
+            res += allClasses[i];
+            if (i + 1 < allClasses.size()) res += " ";
         }
         res += "\"";
         return res;
     }
 
     string outerHTML() const override {
+        string rawHtml;
+
         if (closingType == ClosingType::Single) {
-            return "<" + tagName + classAttr() + "/>";
+            rawHtml = "<" + tagName + classAttr() + "/>";
         }
         else {
-            return "<" + tagName + classAttr() + ">" + innerHTML() + "</" + tagName + ">";
+            rawHtml = "<" + tagName + classAttr() + ">" + innerHTML() + "</" + tagName + ">";
         }
+
+        return state->modifyHTML(this, rawHtml);
     }
 
     string innerHTML() const override {
@@ -86,27 +140,23 @@ public:
     }
 };
 
+
 int main() {
-    LightElementNode* ul = new LightElementNode("ul", DisplayType::Block, ClosingType::Double, { "list" });
+    auto* div = new LightElementNode("div", DisplayType::Block, ClosingType::Double, { "container" });
 
-    LightElementNode* li1 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li1->addChild(new LightTextNode("Пункт 1"));
+    div->addChild(new LightTextNode("Привіт, це активний блок!"));
 
-    LightElementNode* li2 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li2->addChild(new LightTextNode("Пункт 2"));
+    cout << "== Початковий стан (Visible) ==\n";
+    cout << div->outerHTML() << "\n\n";
 
-    LightElementNode* li3 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li3->addChild(new LightTextNode("Пункт 3"));
+    div->setState(new ActiveState());
+    cout << "== Стан Active (має клас 'active') ==\n";
+    cout << div->outerHTML() << "\n\n";
 
-    ul->addChild(li1);
-    ul->addChild(li2);
-    ul->addChild(li3);
+    div->setState(new HiddenState());
+    cout << "== Стан Hidden (нічого не видно) ==\n";
+    cout << div->outerHTML() << "\n";
 
-    cout << "outerHTML:\n" << ul->outerHTML() << "\n\n";
-    cout << "innerHTML:\n" << ul->innerHTML() << "\n";
-
-    delete ul;  
-
+    delete div;
     return 0;
 }
-
