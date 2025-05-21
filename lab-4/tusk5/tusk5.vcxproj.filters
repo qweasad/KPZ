@@ -18,11 +18,5 @@
     <ClCompile Include="tusk3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LightElementNode.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="LightTextNode.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>
