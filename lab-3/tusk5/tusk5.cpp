@@ -4,14 +4,22 @@
 
 using namespace std;
 
-enum class DisplayType { Block, Inline };
-enum class ClosingType { Single, Double };
+class LightElementNode;
+class LightTextNode;
+
+class Visitor {
+public:
+    virtual void visit(LightTextNode* node) = 0;
+    virtual void visit(LightElementNode* node) = 0;
+    virtual ~Visitor() = default;
+};
 
 class LightNode {
 public:
     virtual ~LightNode() = default;
     virtual string outerHTML() const = 0;
     virtual string innerHTML() const = 0;
+    virtual void accept(Visitor* visitor) = 0;
 };
 
 class LightTextNode : public LightNode {
@@ -19,94 +27,98 @@ class LightTextNode : public LightNode {
 public:
     LightTextNode(const string& t) : text(t) {}
 
-    string outerHTML() const override {
-        return text;
+    string outerHTML() const override { return text; }
+    string innerHTML() const override { return text; }
+
+    void accept(Visitor* visitor) override {
+        visitor->visit(this);
     }
 
-    string innerHTML() const override {
-        return text;
-    }
+    string getText() const { return text; }
 };
 
 class LightElementNode : public LightNode {
     string tagName;
-    DisplayType displayType;
-    ClosingType closingType;
-    vector<string> cssClasses;
     vector<LightNode*> children;
-
 public:
-    LightElementNode(const string& tag,
-        DisplayType display,
-        ClosingType closing,
-        const vector<string>& classes = {})
-        : tagName(tag), displayType(display), closingType(closing), cssClasses(classes) {
-    }
+    LightElementNode(const string& tag) : tagName(tag) {}
 
     ~LightElementNode() {
-        for (auto c : children) {
-            delete c;
-        }
+        for (auto* c : children) delete c;
     }
 
-    void addChild(LightNode* child) {
-        children.push_back(child);
-    }
-
-    size_t childrenCount() const {
-        return children.size();
-    }
-
-    string classAttr() const {
-        if (cssClasses.empty()) return "";
-        string res = " class=\"";
-        for (size_t i = 0; i < cssClasses.size(); ++i) {
-            res += cssClasses[i];
-            if (i + 1 < cssClasses.size()) res += " ";
-        }
-        res += "\"";
-        return res;
-    }
+    void addChild(LightNode* node) { children.push_back(node); }
 
     string outerHTML() const override {
-        if (closingType == ClosingType::Single) {
-            return "<" + tagName + classAttr() + "/>";
-        }
-        else {
-            return "<" + tagName + classAttr() + ">" + innerHTML() + "</" + tagName + ">";
-        }
+        return "<" + tagName + ">" + innerHTML() + "</" + tagName + ">";
     }
 
     string innerHTML() const override {
         string res;
-        for (const auto& child : children) {
-            res += child->outerHTML();
-        }
+        for (auto* c : children) res += c->outerHTML();
         return res;
+    }
+
+    const vector<LightNode*>& getChildren() const { return children; }
+    const string& getTagName() const { return tagName; }
+
+    void accept(Visitor* visitor) override {
+        visitor->visit(this);
+        for (auto* c : children) {
+            c->accept(visitor);
+        }
+    }
+};
+
+class CountTextVisitor : public Visitor {
+public:
+    int count = 0;
+
+    void visit(LightTextNode* node) override {
+        ++count;
+    }
+
+    void visit(LightElementNode* node) override {
+    }
+};
+
+class RenderVisitor : public Visitor {
+public:
+    string result;
+
+    void visit(LightTextNode* node) override {
+        result += node->outerHTML();
+    }
+
+    void visit(LightElementNode* node) override {
+        result += "<" + node->getTagName() + ">";
+        for (auto* child : node->getChildren()) {
+            child->accept(this);
+        }
+        result += "</" + node->getTagName() + ">";
     }
 };
 
 int main() {
-    LightElementNode* ul = new LightElementNode("ul", DisplayType::Block, ClosingType::Double, { "list" });
+    auto* root = new LightElementNode("ul");
 
-    LightElementNode* li1 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
+    auto* li1 = new LightElementNode("li");
     li1->addChild(new LightTextNode("Пункт 1"));
 
-    LightElementNode* li2 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
+    auto* li2 = new LightElementNode("li");
     li2->addChild(new LightTextNode("Пункт 2"));
 
-    LightElementNode* li3 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li3->addChild(new LightTextNode("Пункт 3"));
+    root->addChild(li1);
+    root->addChild(li2);
 
-    ul->addChild(li1);
-    ul->addChild(li2);
-    ul->addChild(li3);
+    CountTextVisitor counter;
+    root->accept(&counter);
+    cout << "Кількість текстових вузлів: " << counter.count << endl;
 
-    cout << "outerHTML:\n" << ul->outerHTML() << "\n\n";
-    cout << "innerHTML:\n" << ul->innerHTML() << "\n";
+    RenderVisitor renderer;
+    root->accept(&renderer);
+    cout << "\nЗгенерований HTML:\n" << renderer.result << endl;
 
-    delete ul;  
-
+    delete root;
     return 0;
 }
-
