@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <stack>
 
 using namespace std;
 
@@ -13,28 +12,19 @@ public:
     virtual ~LightNode() = default;
     virtual string outerHTML() const = 0;
     virtual string innerHTML() const = 0;
-
-    virtual void OnCreated() { cout << "Node created\n"; }
-    virtual void OnInserted() { cout << "Node inserted\n"; }
-    virtual void OnRemoved() { cout << "Node removed\n"; }
 };
 
 class LightTextNode : public LightNode {
     string text;
 public:
-    LightTextNode(const string& t) : text(t) { OnCreated(); }
+    LightTextNode(const string& t) : text(t) {}
 
     string outerHTML() const override {
-        OnTextRendered();
         return text;
     }
 
     string innerHTML() const override {
         return text;
-    }
-
-    void OnTextRendered() const {
-        cout << "Text rendered: " << text << "\n";
     }
 };
 
@@ -51,19 +41,27 @@ public:
         ClosingType closing,
         const vector<string>& classes = {})
         : tagName(tag), displayType(display), closingType(closing), cssClasses(classes) {
-        OnCreated();
     }
 
     ~LightElementNode() {
         for (auto c : children) {
             delete c;
         }
-        OnRemoved();
     }
 
     void addChild(LightNode* child) {
         children.push_back(child);
-        child->OnInserted();
+    }
+
+    void removeLastChild() {
+        if (!children.empty()) {
+            delete children.back();
+            children.pop_back();
+        }
+    }
+
+    const vector<LightNode*>& getChildren() const {
+        return children;
     }
 
     size_t childrenCount() const {
@@ -97,59 +95,92 @@ public:
         }
         return res;
     }
-
-    const vector<LightNode*>& getChildren() const { return children; }
 };
 
-class DepthFirstIterator {
-    stack<LightNode*> nodesStack;
+class Command {
 public:
-    DepthFirstIterator(LightNode* root) {
-        if (root) nodesStack.push(root);
+    virtual ~Command() = default;
+    virtual void execute() = 0;
+    virtual void undo() = 0;
+};
+
+class AddChildCommand : public Command {
+    LightElementNode* parent;
+    LightNode* child;
+    bool executed = false;
+
+public:
+    AddChildCommand(LightElementNode* p, LightNode* c)
+        : parent(p), child(c) {
     }
 
-    bool hasNext() const {
-        return !nodesStack.empty();
-    }
-
-    LightNode* next() {
-        if (nodesStack.empty()) return nullptr;
-        LightNode* current = nodesStack.top();
-        nodesStack.pop();
-
-        if (auto elem = dynamic_cast<LightElementNode*>(current)) {
-            for (auto it = elem->getChildren().rbegin(); it != elem->getChildren().rend(); ++it) {
-                nodesStack.push(*it);
-            }
+    void execute() override {
+        if (!executed) {
+            parent->addChild(child);
+            executed = true;
         }
-        return current;
+    }
+
+    void undo() override {
+        if (executed) {
+            parent->removeLastChild();
+            executed = false;
+        }
+    }
+};
+
+class CommandManager {
+    vector<Command*> history;
+
+public:
+    void executeCommand(Command* cmd) {
+        cmd->execute();
+        history.push_back(cmd);
+    }
+
+    void undoLast() {
+        if (!history.empty()) {
+            Command* cmd = history.back();
+            cmd->undo();
+            delete cmd;
+            history.pop_back();
+        }
+    }
+
+    ~CommandManager() {
+        for (auto cmd : history) delete cmd;
     }
 };
 
 int main() {
-    LightElementNode* ul = new LightElementNode("ul", DisplayType::Block, ClosingType::Double, { "list" });
+    CommandManager manager;
 
-    LightElementNode* li1 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li1->addChild(new LightTextNode("Пункт 1"));
+    auto* ul = new LightElementNode("ul", DisplayType::Block, ClosingType::Double, { "list" });
 
-    LightElementNode* li2 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li2->addChild(new LightTextNode("Пункт 2"));
+    auto* li1 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
+    auto* text1 = new LightTextNode("Пункт 1");
+    li1->addChild(text1);
 
-    LightElementNode* li3 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li3->addChild(new LightTextNode("Пункт 3"));
+    auto* cmd1 = new AddChildCommand(ul, li1);
+    manager.executeCommand(cmd1);
 
-    ul->addChild(li1);
-    ul->addChild(li2);
-    ul->addChild(li3);
+    cout << "\n== Після додавання першого елемента ==\n";
+    cout << ul->outerHTML() << "\n";
 
-    cout << "outerHTML:\n" << ul->outerHTML() << "\n\n";
+    auto* li2 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
+    auto* text2 = new LightTextNode("Пункт 2");
+    li2->addChild(text2);
 
-    cout << "\n-- Iterate Depth First --\n";
-    DepthFirstIterator it(ul);
-    while (it.hasNext()) {
-        LightNode* node = it.next();
-        cout << node->outerHTML() << "\n";
-    }
+    auto* cmd2 = new AddChildCommand(ul, li2);
+    manager.executeCommand(cmd2);
+
+    cout << "\n== Після додавання другого елемента ==\n";
+    cout << ul->outerHTML() << "\n";
+
+    manager.undoLast();
+
+    cout << "\n== Після undo (другий елемент видалено) ==\n";
+    cout << ul->outerHTML() << "\n";
 
     delete ul;
 
