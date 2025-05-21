@@ -1,110 +1,109 @@
-# Лабораторна робота: Облік товарів на складі
 
-## Опис проєкту
+## РћРїРёСЃ РїСЂРѕС”РєС‚Сѓ
 
-Цей проєкт реалізує базову систему обліку товарів на складі. Основні класи: `Money`, `Product`, `Warehouse`, `Reporting`.
+Р¦РµР№ РїСЂРѕС”РєС‚ СЂРµР°Р»С–Р·СѓС” Р±Р°Р·РѕРІСѓ СЃРёСЃС‚РµРјСѓ РѕР±Р»С–РєСѓ С‚РѕРІР°СЂС–РІ РЅР° СЃРєР»Р°РґС–. РћСЃРЅРѕРІРЅС– РєР»Р°СЃРё: `Money`, `Product`, `Warehouse`, `Reporting`.
 
 ---
 
-## Дотримання принципів програмування
+## Р”РѕС‚СЂРёРјР°РЅРЅСЏ РїСЂРёРЅС†РёРїС–РІ РїСЂРѕРіСЂР°РјСѓРІР°РЅРЅСЏ
 
-У цьому проєкті реалізовано наступні принципи:
+РЈ С†СЊРѕРјСѓ РїСЂРѕС”РєС‚С– СЂРµР°Р»С–Р·РѕРІР°РЅРѕ РЅР°СЃС‚СѓРїРЅС– РїСЂРёРЅС†РёРїРё:
 
 ---
 
 ### 1. **DRY**
 
-> Не повторюй себе
+> РќРµ РїРѕРІС‚РѕСЂСЋР№ СЃРµР±Рµ
 
-Використання методу `Normalize()` в `Money`, щоб уникнути повторення логіки перерахунку копійок/гривень.
+Р’РёРєРѕСЂРёСЃС‚Р°РЅРЅСЏ РјРµС‚РѕРґСѓ `Normalize()` РІ `Money`, С‰РѕР± СѓРЅРёРєРЅСѓС‚Рё РїРѕРІС‚РѕСЂРµРЅРЅСЏ Р»РѕРіС–РєРё РїРµСЂРµСЂР°С…СѓРЅРєСѓ РєРѕРїС–Р№РѕРє/РіСЂРёРІРµРЅСЊ.
 
-Файл: `tusk1.cpp`, рядки `12–21` 
+Р¤Р°Р№Р»: `tusk1.cpp`, СЂСЏРґРєРё `12вЂ“21` 
 https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L12-L21
 
 ---
 
 ### 2. **KISS**
 
->  Пиши просто
+>  РџРёС€Рё РїСЂРѕСЃС‚Рѕ
 
-Класи мають просту структуру: `Product` зберігає лише назву й ціну, без зайвого ускладнення.
+РљР»Р°СЃРё РјР°СЋС‚СЊ РїСЂРѕСЃС‚Сѓ СЃС‚СЂСѓРєС‚СѓСЂСѓ: `Product` Р·Р±РµСЂС–РіР°С” Р»РёС€Рµ РЅР°Р·РІСѓ Р№ С†С–РЅСѓ, Р±РµР· Р·Р°Р№РІРѕРіРѕ СѓСЃРєР»Р°РґРЅРµРЅРЅСЏ.
 
-Файл: `tusk1.cpp`, рядки `38–42` 
+Р¤Р°Р№Р»: `tusk1.cpp`, СЂСЏРґРєРё `38вЂ“42` 
 https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L38-L42
 
 ---
 
 ### 3. **YAGNI**
 
-> Не реалізовуй те, чого поки не потрібно
+> РќРµ СЂРµР°Р»С–Р·РѕРІСѓР№ С‚Рµ, С‡РѕРіРѕ РїРѕРєРё РЅРµ РїРѕС‚СЂС–Р±РЅРѕ
 
-В коді немає зайвих методів, які не використовуються. Усі класи містять лише необхідний функціонал.
+Р’ РєРѕРґС– РЅРµРјР°С” Р·Р°Р№РІРёС… РјРµС‚РѕРґС–РІ, СЏРєС– РЅРµ РІРёРєРѕСЂРёСЃС‚РѕРІСѓСЋС‚СЊСЃСЏ. РЈСЃС– РєР»Р°СЃРё РјС–СЃС‚СЏС‚СЊ Р»РёС€Рµ РЅРµРѕР±С…С–РґРЅРёР№ С„СѓРЅРєС†С–РѕРЅР°Р».
 
 
 ---
 
 ### 4. **Fail Fast**
 
-> Падай одразу
+> РџР°РґР°Р№ РѕРґСЂР°Р·Сѓ
 
-В `RegisterShipment` перевіряється, чи достатньо товару перед відвантаженням. Якщо ні – виводиться помилка, дія не виконується.
+Р’ `RegisterShipment` РїРµСЂРµРІС–СЂСЏС”С‚СЊСЃСЏ, С‡Рё РґРѕСЃС‚Р°С‚РЅСЊРѕ С‚РѕРІР°СЂСѓ РїРµСЂРµРґ РІС–РґРІР°РЅС‚Р°Р¶РµРЅРЅСЏРј. РЇРєС‰Рѕ РЅС– вЂ“ РІРёРІРѕРґРёС‚СЊСЃСЏ РїРѕРјРёР»РєР°, РґС–СЏ РЅРµ РІРёРєРѕРЅСѓС”С‚СЊСЃСЏ.
 
-Файл: `tusk1.cpp`, рядки `105–107` 
+Р¤Р°Р№Р»: `tusk1.cpp`, СЂСЏРґРєРё `105вЂ“107` 
 https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L105-L107
 
 ---
 
 ### 5. **Composition Over Inheritance**
 
-> Композиція замість наслідування
+> РљРѕРјРїРѕР·РёС†С–СЏ Р·Р°РјС–СЃС‚СЊ РЅР°СЃР»С–РґСѓРІР°РЅРЅСЏ
 
-`Warehouse` має об’єкт класу `Product` замість наслідування, що спрощує розширення й використання.
+`Warehouse` РјР°С” РѕР±вЂ™С”РєС‚ РєР»Р°СЃСѓ `Product` Р·Р°РјС–СЃС‚СЊ РЅР°СЃР»С–РґСѓРІР°РЅРЅСЏ, С‰Рѕ СЃРїСЂРѕС‰СѓС” СЂРѕР·С€РёСЂРµРЅРЅСЏ Р№ РІРёРєРѕСЂРёСЃС‚Р°РЅРЅСЏ.
 
-Файл: `tusk1.cpp`, рядки `48,71`
+Р¤Р°Р№Р»: `tusk1.cpp`, СЂСЏРґРєРё `48,71`
 https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L48
 https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L71
 
 ---
 
-## SOLID-принципи
+## SOLID-РїСЂРёРЅС†РёРїРё
 
 ---
 
-### S — Single Responsibility Principle
+### S вЂ” Single Responsibility Principle
 
-Кожен клас виконує лише свою функцію:  
-- `Money` – операції з грошима https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L7-L43
-- `Product` – назва й ціна  https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L45-L67
-- `Warehouse` – облік товару  https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L69-L89
-- `Reporting` – логіка обліку надходжень/відвантажень https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L91-L118
+РљРѕР¶РµРЅ РєР»Р°СЃ РІРёРєРѕРЅСѓС” Р»РёС€Рµ СЃРІРѕСЋ С„СѓРЅРєС†С–СЋ:  
+- `Money` вЂ“ РѕРїРµСЂР°С†С–С— Р· РіСЂРѕС€РёРјР° https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L7-L43
+- `Product` вЂ“ РЅР°Р·РІР° Р№ С†С–РЅР°  https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L45-L67
+- `Warehouse` вЂ“ РѕР±Р»С–Рє С‚РѕРІР°СЂСѓ  https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L69-L89
+- `Reporting` вЂ“ Р»РѕРіС–РєР° РѕР±Р»С–РєСѓ РЅР°РґС…РѕРґР¶РµРЅСЊ/РІС–РґРІР°РЅС‚Р°Р¶РµРЅСЊ https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L91-L118
 
-`tusk1.cpp`, усі класи
+`tusk1.cpp`, СѓСЃС– РєР»Р°СЃРё
 
 ---
 
-### O — Open/Closed Principle
+### O вЂ” Open/Closed Principle
 
 
-`tusk1.cpp`, рядки `7–43`
+`tusk1.cpp`, СЂСЏРґРєРё `7вЂ“43`
 https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L7-L43
-`tusk1.cpp`, рядки `45–67`
+`tusk1.cpp`, СЂСЏРґРєРё `45вЂ“67`
 https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L45-L67
-`tusk1.cpp`, рядки `91–118`
+`tusk1.cpp`, СЂСЏРґРєРё `91вЂ“118`
 https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L91-L118
 
 ---
 
-### L — Liskov Substitution Principle
+### L вЂ” Liskov Substitution Principle
 
 
 ---
 
-### I — Interface Segregation Principle
+### I вЂ” Interface Segregation Principle
 
 ---
 
-### D — Dependency Inversion Principle
-`tusk1.cpp`, рядки `91–118`
+### D вЂ” Dependency Inversion Principle
+`tusk1.cpp`, СЂСЏРґРєРё `91вЂ“118`
 https://github.com/qweasad/KPZ/blob/390c26a20b8afdc3ea12d57e1668b88c9fb0e53c/lab-1/tusk1/tusk1.cpp#L91-L118
 
 
