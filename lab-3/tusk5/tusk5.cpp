@@ -29,6 +29,7 @@ public:
 };
 
 class LightElementNode : public LightNode {
+protected:
     string tagName;
     DisplayType displayType;
     ClosingType closingType;
@@ -43,18 +44,12 @@ public:
         : tagName(tag), displayType(display), closingType(closing), cssClasses(classes) {
     }
 
-    ~LightElementNode() {
-        for (auto c : children) {
-            delete c;
-        }
+    virtual ~LightElementNode() {
+        for (auto c : children) delete c;
     }
 
     void addChild(LightNode* child) {
         children.push_back(child);
-    }
-
-    size_t childrenCount() const {
-        return children.size();
     }
 
     string classAttr() const {
@@ -69,12 +64,22 @@ public:
     }
 
     string outerHTML() const override {
+        onCreated();
+        onClassListApplied();
+        onStylesApplied();
+
+        string result;
         if (closingType == ClosingType::Single) {
-            return "<" + tagName + classAttr() + "/>";
+            result = "<" + tagName + classAttr() + "/>";
         }
         else {
-            return "<" + tagName + classAttr() + ">" + innerHTML() + "</" + tagName + ">";
+            string inner = innerHTML();
+            onTextRendered(inner);  
+            result = "<" + tagName + classAttr() + ">" + inner + "</" + tagName + ">";
         }
+
+        onInserted();
+        return result;
     }
 
     string innerHTML() const override {
@@ -84,29 +89,54 @@ public:
         }
         return res;
     }
+
+    virtual void onCreated() const {
+        cout << "[Lifecycle] onCreated()\n";
+    }
+
+    virtual void onClassListApplied() const {
+        cout << "[Lifecycle] onClassListApplied()\n";
+    }
+
+    virtual void onStylesApplied() const {
+        cout << "[Lifecycle] onStylesApplied()\n";
+    }
+
+    virtual void onTextRendered(string& text) const {
+        cout << "[Lifecycle] onTextRendered()\n";
+    }
+
+    virtual void onInserted() const {
+        cout << "[Lifecycle] onInserted()\n";
+    }
+};
+
+class LoggingDiv : public LightElementNode {
+public:
+    LoggingDiv(const vector<string>& classes = {})
+        : LightElementNode("div", DisplayType::Block, ClosingType::Double, classes) {
+    }
+
+    void onCreated() const override {
+        cout << "[LoggingDiv] Created!\n";
+    }
+
+    void onInserted() const override {
+        cout << "[LoggingDiv] Inserted into DOM!\n";
+    }
+
+    void onTextRendered(string& text) const override {
+        cout << "[LoggingDiv] Rendering text: " << text << "\n";
+    }
 };
 
 int main() {
-    LightElementNode* ul = new LightElementNode("ul", DisplayType::Block, ClosingType::Double, { "list" });
+    auto* div = new LoggingDiv({ "box", "blue" });
+    div->addChild(new LightTextNode("Hello from inside the div!"));
 
-    LightElementNode* li1 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li1->addChild(new LightTextNode("Пункт 1"));
+    cout << "\n--- Rendering HTML ---\n";
+    cout << div->outerHTML() << "\n";
 
-    LightElementNode* li2 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li2->addChild(new LightTextNode("Пункт 2"));
-
-    LightElementNode* li3 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    li3->addChild(new LightTextNode("Пункт 3"));
-
-    ul->addChild(li1);
-    ul->addChild(li2);
-    ul->addChild(li3);
-
-    cout << "outerHTML:\n" << ul->outerHTML() << "\n\n";
-    cout << "innerHTML:\n" << ul->innerHTML() << "\n";
-
-    delete ul;  
-
+    delete div;
     return 0;
 }
-
