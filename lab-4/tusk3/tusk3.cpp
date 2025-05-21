@@ -1,80 +1,25 @@
+#include "LightElementNode.h"
 #include <iostream>
-#include <stack>
-#include <string>
-using namespace std;
-
-class TextDocumentMemento {
-private:
-    string state;
-
-public:
-    TextDocumentMemento(const string& text) : state(text) {}
-
-    string getState() const {
-        return state;
-    }
-};
-
-class TextDocument {
-private:
-    string text;
-
-public:
-    void setText(const string& newText) {
-        text = newText;
-    }
-
-    string getText() const {
-        return text;
-    }
-
-    TextDocumentMemento createMemento() const {
-        return TextDocumentMemento(text);
-    }
-
-    void restoreFromMemento(const TextDocumentMemento& memento) {
-        text = memento.getState();
-    }
-};
-
-class TextEditor {
-private:
-    TextDocument document;
-    stack<TextDocumentMemento> history;
-
-public:
-    void write(const string& text) {
-        history.push(document.createMemento());
-        document.setText(text);
-    }
-
-    void undo() {
-        if (!history.empty()) {
-            document.restoreFromMemento(history.top());
-            history.pop();
-        }
-        else {
-            cout << "Немає попередніх версій для скасування.\n";
-        }
-    }
-
-    void show() const {
-        cout << "Поточний текст: " << document.getText() << "\n";
-    }
-};
+#include <windows.h>
 
 int main() {
-    TextEditor editor;
+    SetConsoleOutputCP(CP_UTF8);
+    auto* ul = new LightElementNode("ul", LightElementNode::DisplayType::Block,
+        LightElementNode::ClosingType::Double, { "list" });
 
-    editor.write("Привіт, світ!");
-    editor.show();  
+    auto* li1 = new LightElementNode("li", LightElementNode::DisplayType::Block,
+        LightElementNode::ClosingType::Double);
+    li1->addChild(new LightTextNode("РџСѓРЅРєС‚ 1"));
+    li1->addEventListener(EventType::Click, []() { std::cout << "Clicked on item 1!\n"; });
 
-    editor.write("Це другий рядок.");
-    editor.show();  
+    ul->addChild(li1);
 
-    cout << "Скасовуємо останню зміну...\n";
-    editor.undo();
-    editor.show();  
+    std::cout << "outerHTML:\n" << ul->outerHTML() << "\n";
+    std::cout << "innerHTML:\n" << ul->innerHTML() << "\n";
 
+    std::cout << "Triggering click event...\n";
+    li1->trigger(EventType::Click);
+
+    delete ul;
     return 0;
 }
