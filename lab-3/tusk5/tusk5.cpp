@@ -28,64 +28,107 @@ public:
     }
 };
 
+class LightElementNode;
+
+class NodeState {
+public:
+    virtual ~NodeState() = default;
+    virtual string modifyHTML(const LightElementNode* node, const string& html) const = 0;
+    virtual string name() const = 0;
+};
+
+class VisibleState : public NodeState {
+public:
+    string modifyHTML(const LightElementNode* node, const string& html) const override {
+        return html; 
+    }
+
+    string name() const override {
+        return "visible";
+    }
+};
+
+class HiddenState : public NodeState {
+public:
+    string modifyHTML(const LightElementNode* node, const string& html) const override {
+        return ""; 
+    }
+
+    string name() const override {
+        return "hidden";
+    }
+};
+
+class ActiveState : public NodeState {
+public:
+    string modifyHTML(const LightElementNode* node, const string& html) const override {
+        return html; 
+    }
+
+    string name() const override {
+        return "active";
+    }
+};
+
 class LightElementNode : public LightNode {
     string tagName;
     DisplayType displayType;
     ClosingType closingType;
     vector<string> cssClasses;
     vector<LightNode*> children;
+    NodeState* state;
 
 public:
     LightElementNode(const string& tag,
         DisplayType display,
         ClosingType closing,
-        const vector<string>& classes = {})
-        : tagName(tag), displayType(display), closingType(closing), cssClasses(classes) {
+        const vector<string>& classes = {},
+        NodeState* initialState = new VisibleState())
+        : tagName(tag), displayType(display), closingType(closing), cssClasses(classes), state(initialState) {
     }
 
     ~LightElementNode() {
-        for (auto c : children) {
-            delete c;
-        }
+        for (auto c : children) delete c;
+        delete state;
     }
 
     void addChild(LightNode* child) {
         children.push_back(child);
     }
 
-    void removeLastChild() {
-        if (!children.empty()) {
-            delete children.back();
-            children.pop_back();
-        }
-    }
-
-    const vector<LightNode*>& getChildren() const {
-        return children;
-    }
-
-    size_t childrenCount() const {
-        return children.size();
+    void setState(NodeState* newState) {
+        delete state;
+        state = newState;
     }
 
     string classAttr() const {
-        if (cssClasses.empty()) return "";
+        vector<string> allClasses = cssClasses;
+
+        if (state->name() == "active") {
+            allClasses.push_back("active");
+        }
+
+        if (allClasses.empty()) return "";
         string res = " class=\"";
-        for (size_t i = 0; i < cssClasses.size(); ++i) {
-            res += cssClasses[i];
-            if (i + 1 < cssClasses.size()) res += " ";
+        for (size_t i = 0; i < allClasses.size(); ++i) {
+            res += allClasses[i];
+            if (i + 1 < allClasses.size()) res += " ";
         }
         res += "\"";
         return res;
     }
 
     string outerHTML() const override {
+        string rawHtml;
+
         if (closingType == ClosingType::Single) {
-            return "<" + tagName + classAttr() + "/>";
+            rawHtml = "<" + tagName + classAttr() + "/>";
         }
         else {
-            return "<" + tagName + classAttr() + ">" + innerHTML() + "</" + tagName + ">";
+            rawHtml = "<" + tagName + classAttr() + ">" + innerHTML() + "</" + tagName + ">";
         }
+
+        return state->modifyHTML(this, rawHtml);
     }
 
     string innerHTML() const override {
@@ -97,92 +140,23 @@ public:
     }
 };
 
-class Command {
-public:
-    virtual ~Command() = default;
-    virtual void execute() = 0;
-    virtual void undo() = 0;
-};
-
-class AddChildCommand : public Command {
-    LightElementNode* parent;
-    LightNode* child;
-    bool executed = false;
-
-public:
-    AddChildCommand(LightElementNode* p, LightNode* c)
-        : parent(p), child(c) {
-    }
-
-    void execute() override {
-        if (!executed) {
-            parent->addChild(child);
-            executed = true;
-        }
-    }
-
-    void undo() override {
-        if (executed) {
-            parent->removeLastChild();
-            executed = false;
-        }
-    }
-};
-
-class CommandManager {
-    vector<Command*> history;
-
-public:
-    void executeCommand(Command* cmd) {
-        cmd->execute();
-        history.push_back(cmd);
-    }
-
-    void undoLast() {
-        if (!history.empty()) {
-            Command* cmd = history.back();
-            cmd->undo();
-            delete cmd;
-            history.pop_back();
-        }
-    }
-
-    ~CommandManager() {
-        for (auto cmd : history) delete cmd;
-    }
-};
 
 int main() {
-    CommandManager manager;
+    auto* div = new LightElementNode("div", DisplayType::Block, ClosingType::Double, { "container" });
 
-    auto* ul = new LightElementNode("ul", DisplayType::Block, ClosingType::Double, { "list" });
+    div->addChild(new LightTextNode("Привіт, це активний блок!"));
 
-    auto* li1 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    auto* text1 = new LightTextNode("Пункт 1");
-    li1->addChild(text1);
+    cout << "== Початковий стан (Visible) ==\n";
+    cout << div->outerHTML() << "\n\n";
 
-    auto* cmd1 = new AddChildCommand(ul, li1);
-    manager.executeCommand(cmd1);
+    div->setState(new ActiveState());
+    cout << "== Стан Active (має клас 'active') ==\n";
+    cout << div->outerHTML() << "\n\n";
 
-    cout << "\n== Після додавання першого елемента ==\n";
-    cout << ul->outerHTML() << "\n";
+    div->setState(new HiddenState());
+    cout << "== Стан Hidden (нічого не видно) ==\n";
+    cout << div->outerHTML() << "\n";
 
-    auto* li2 = new LightElementNode("li", DisplayType::Block, ClosingType::Double);
-    auto* text2 = new LightTextNode("Пункт 2");
-    li2->addChild(text2);
-
-    auto* cmd2 = new AddChildCommand(ul, li2);
-    manager.executeCommand(cmd2);
-
-    cout << "\n== Після додавання другого елемента ==\n";
-    cout << ul->outerHTML() << "\n";
-
-    manager.undoLast();
-
-    cout << "\n== Після undo (другий елемент видалено) ==\n";
-    cout << ul->outerHTML() << "\n";
-
-    delete ul;
-
+    delete div;
     return 0;
 }
